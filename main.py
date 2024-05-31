@@ -7,11 +7,8 @@ import matplotlib.pyplot as plt
 import osmnx.graph
 import osmnx.utils_graph
 
-from decouple import config
-from supabase import create_client, Client
-
-supabase_url = config("SUPABASE_URL")
-supabase_key = config("SUPABASE_KEY")
+from db.supabase import supabase  # Ensure to import the supabase client
+from routes.shuttles import router as shuttles_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -28,18 +25,14 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-supabase: Client = create_client(supabase_url, supabase_key)
-
 
 @app.get("/")
 async def root():
     return {"message": f"{app.state.G.nodes}"}
 
-@app.get("/shuttles")
-def get_shuttles():
-    shuttles = supabase.table("GPS").select("*").execute()
-    return shuttles
 
-@app.get("/shuttles/{shuttle_id}")
-def get_shuttle(shuttle_id: int):
-    return {"message": f"Shuttle {shuttle_id}"}
+
+app.include_router(shuttles_router)
+
+# @app.get("/shuttles/{shuttle_id}")
+# get_shuttle(shuttle_id)
