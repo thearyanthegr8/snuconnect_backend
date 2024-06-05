@@ -1,4 +1,4 @@
-from array import array
+from time import sleep
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from collections import deque
@@ -6,30 +6,50 @@ from collections import deque
 import osmnx
 import osmnx.convert
 
+from threading import Thread
+
+import osmnx.distance
+from threads import location_thread
+
 from db.supabase import supabase
 from routes.shuttles import router as shuttles_router
 from routes.shuttle_id import router as shutttle_id_router
 from routes.distance import router as distance_router
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Application online!")
-    app.state.G = osmnx.graph_from_place(
+
+    G = osmnx.graph_from_place(
         "Shiv Nadar University, India", custom_filter='["highway"~"service"]'
     )
-    app.state.G.remove_nodes_from(
-        [4227700806, 4227700802, 4314526562, 4227700788, 5287350292]
-    )
-    app.state.GDF = osmnx.convert.graph_to_gdfs(app.state.G)[1]
+    G.remove_nodes_from([4227700806, 4227700802, 4314526562, 4227700788, 5287350292])
 
-    bus_routes:dict[str, deque] = {}
+    app.state.GDF = osmnx.convert.graph_to_gdfs(G)
+    app.state.G = G
 
-    route_ids = supabase.table("Route").select("*").execute().data; 
+    all_shuttle_routes: dict[int, list] = {}
+    stop_nodes: dict[int, list] = {}
+
+    route_ids = supabase.table("Route").select("*").execute().data
     for i in route_ids:
-        bus_route = supabase.table("Stops").select("*").eq("route_id", i['id']).execute().data    
-        bus_routes.update({f"{i}":deque(bus_route)})
-        
-    app.state.bus_routes = bus_routes
+        shuttle_route = (
+            supabase.table("Stops").select("*").eq("route_id", i["id"]).execute().data
+        )
+        print(shuttle_route)
+        all_shuttle_routes.update({i["id"]: shuttle_route})
+
+        temp = []
+        for j in shuttle_route:
+            temp.append(osmnx.distance.nearest_nodes(G, j["long"], j["lat"]))
+        stop_nodes.update({i["id"]: temp})
+
+    app.state.stop_nodes = stop_nodes
+    app.state.all_shuttle_routes = all_shuttle_routes
+
+    t = Thread(target=location_thread.test, args=[app], daemon=True).start()
+
     # osmnx.plot_graph(app.state.G)
     yield
     print("Goodbye!")
