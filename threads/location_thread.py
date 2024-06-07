@@ -9,6 +9,7 @@ def test(app: FastAPI):
     curr_delay = {}
     last_query_node = {}
     last_stop = {}
+
     for i in shuttles:
         curr_delay.update({i['id']: 0})
         last_query_node.update({i['id']: -1})
@@ -19,19 +20,23 @@ def test(app: FastAPI):
         G = app.state.G
 
         for i in shuttles:
-            nearest_node = osmnx.distance.nearest_nodes(
-                G, i["LONG"], i["LAT"], return_dist=True
-            )
+            dist=10000
+            nearest_node: tuple[int, int] = (-1, -1) 
 
-            if nearest_node[0] in app.state.stop_nodes[i['assigned_route']] and nearest_node[1]<20:
-                if last_query_node[i['id']] == nearest_node[0]:
+            for j in app.state.stop_locations[i['assigned_route']]:
+                if osmnx.distance.great_circle(j[0], j[1], i['LAT'], i['LONG']) < dist:
+                    nearest_node = j
+                    dist = osmnx.distance.great_circle(j[0], j[1], i['LAT'], i['LONG'])
+
+            if dist<10:
+                if last_query_node[i['id']] == nearest_node:
                     curr_delay[i['id']] += 5
                 else:
-                    last_query_node[i['id']] = nearest_node[0]
+                    last_query_node[i['id']] = nearest_node
                     curr_delay[i['id']] = 0
             
             if curr_delay[i['id']] >= 20:
-                last_stop[i['id']] = nearest_node[0]
+                last_stop[i['id']] = nearest_node
                 curr_delay[i['id']] = 0
 
         print(curr_delay)

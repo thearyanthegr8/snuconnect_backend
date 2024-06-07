@@ -5,13 +5,13 @@ from collections import deque
 
 import osmnx
 import osmnx.convert
+import osmnx.distance
 
 from threading import Thread
-
-import osmnx.distance
 from threads import location_thread
 
 from db.supabase import supabase
+
 from routes.shuttles import router as shuttles_router
 from routes.shuttle_id import router as shutttle_id_router
 from routes.distance import router as distance_router
@@ -30,22 +30,22 @@ async def lifespan(app: FastAPI):
     app.state.G = G
 
     all_shuttle_routes: dict[int, list] = {}
-    stop_nodes: dict[int, list] = {}
+    stop_locations: dict[int, list[tuple[float, float]]] = {}
 
     route_ids = supabase.table("Route").select("*").execute().data
     for i in route_ids:
         shuttle_route = (
             supabase.table("Stops").select("*").eq("route_id", i["id"]).execute().data
         )
-        print(shuttle_route)
         all_shuttle_routes.update({i["id"]: shuttle_route})
 
         temp = []
         for j in shuttle_route:
-            temp.append(osmnx.distance.nearest_nodes(G, j["long"], j["lat"]))
-        stop_nodes.update({i["id"]: temp})
+            temp.append((j["lat"], j["long"]))
+        print(temp)
+        stop_locations.update({i["id"]: temp})
 
-    app.state.stop_nodes = stop_nodes
+    app.state.stop_locations = stop_locations
     app.state.all_shuttle_routes = all_shuttle_routes
 
     t = Thread(target=location_thread.test, args=[app], daemon=True).start()
