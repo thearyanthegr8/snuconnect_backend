@@ -19,10 +19,10 @@ from routes.distance import router as distance_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("Application online!")
+    print('Application online!')
 
     G = osmnx.graph_from_place(
-        "Shiv Nadar University, India", custom_filter='["highway"~"service"]'
+        'Shiv Nadar University, India', custom_filter="['highway'~'service']"
     )
     G.remove_nodes_from([4227700806, 4227700802, 4314526562, 4227700788, 5287350292])
 
@@ -32,18 +32,18 @@ async def lifespan(app: FastAPI):
     all_shuttle_routes: dict[int, list] = {}
     stop_locations: dict[int, list[tuple[float, float]]] = {}
 
-    route_ids = supabase.table("Route").select("*").execute().data
+    route_ids = supabase.table('Route').select('*').execute().data
     for i in route_ids:
         shuttle_route = (
-            supabase.table("Stops").select("*").eq("route_id", i["id"]).execute().data
+            supabase.table('Stops').select('*').eq('route_id', i['id']).execute().data
         )
-        all_shuttle_routes.update({i["id"]: shuttle_route})
+        all_shuttle_routes.update({i['id']: shuttle_route})
 
         temp = []
         for j in shuttle_route:
-            temp.append((j["lat"], j["long"]))
+            temp.append((j['lat'], j['long']))
         print(temp)
-        stop_locations.update({i["id"]: temp})
+        stop_locations.update({i['id']: temp})
 
     app.state.stop_locations = stop_locations
     app.state.all_shuttle_routes = all_shuttle_routes
@@ -52,15 +52,15 @@ async def lifespan(app: FastAPI):
 
     # osmnx.plot_graph(app.state.G)
     yield
-    print("Goodbye!")
+    print('Goodbye!')
 
 
 app = FastAPI(lifespan=lifespan)
 
 
-@app.get("/")
+@app.get('/')
 async def root():
-    return {"message": f"{app.state.G.nodes}"}
+    return {'message': f'{app.state.G.nodes}'}
 
 
 app.include_router(shuttles_router)
