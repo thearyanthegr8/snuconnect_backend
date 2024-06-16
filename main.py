@@ -74,9 +74,6 @@ async def lifespan(app: FastAPI):
 
         stop_distance.update({i["id"]: dist})
         stop_locations.update({i["id"]: temp})
-
-        print(stop_distance)
-        print(stop_locations)
         
     app.state.stop_distance = stop_distance
     app.state.stop_locations = stop_locations
