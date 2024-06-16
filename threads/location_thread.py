@@ -11,12 +11,14 @@ def test(app: FastAPI):
     curr_delay = {}
     last_query_node = {}
     last_stop = {}
-    reverse_direc = False
+    reverse_direc = {}
 
+    print(shuttles)
     for i in shuttles:
         curr_delay.update({i["id"]: 0})
         last_query_node.update({i["id"]: (-1, -1)})
         last_stop.update({i["id"]: (-1, -1)})
+        reverse_direc.update({i["id"]: False})
 
     while True:
         shuttles = supabase.table("GPS").select("*").execute().data
@@ -47,7 +49,12 @@ def test(app: FastAPI):
                 if last_stop[i["id"]] != (-1, -1):
                     x = route.index(last_stop[i["id"]])
                     y = route.index(nearest_node)
-                    reverse_direc = y - x < 0
+                    if x == 0:
+                        reverse_direc[i["id"]] = False
+                    elif y == len(route) - 1:
+                        reverse_direc[i["id"]] = True
+                    elif x != y:
+                        reverse_direc[i["id"]] = y - x < 0
 
                 last_stop[i["id"]] = nearest_node
                 curr_delay[i["id"]] = 0
@@ -58,5 +65,5 @@ def test(app: FastAPI):
         print(curr_delay)
         print(last_query_node)
         print(last_stop)
-
+        print(reverse_direc)
         sleep(5)

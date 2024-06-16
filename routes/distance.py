@@ -2,11 +2,7 @@
 
 from fastapi import APIRouter, Request
 import networkx as nx
-import osmnx
-import osmnx.distance
 import geopandas
-from collections import deque
-
 
 router = APIRouter()
 
