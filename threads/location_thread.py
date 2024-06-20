@@ -1,6 +1,7 @@
 from time import sleep
 from fastapi import FastAPI
 import osmnx.distance
+import requests
 from db.supabase import supabase
 import osmnx
 
@@ -13,7 +14,6 @@ def test(app: FastAPI):
     last_stop = {}
     reverse_direc = {}
 
-    print(shuttles)
     for i in shuttles:
         curr_delay.update({i["id"]: 0})
         last_query_node.update({i["id"]: (-1, -1)})
@@ -24,19 +24,23 @@ def test(app: FastAPI):
         shuttles = supabase.table("GPS").select("*").execute().data
 
         for i in shuttles:
-            route: list[tuple[int, int]] = app.state.stop_locations[i["assigned_route"]]
+            route: list[tuple] = app.state.stop_locations[i["assigned_route"]]
             dist = 10000
             nearest_node: tuple[int, int] = (-1, -1)
 
             for stop in route:
-                if (
-                    osmnx.distance.great_circle(stop[0], stop[1], i["LAT"], i["LONG"])
-                    < dist
-                ):
+                params = {
+                    "profile": "car",
+                }
+                req_string = f"http://127.0.0.1:8989/route?point={i['LAT']},{i['LONG']}&point={stop[0]},{stop[1]}"
+                res = requests.get(
+                    url=req_string,
+                    params=params,
+                )
+                res = res.json()
+                if res["paths"][0]["distance"] < dist:
                     nearest_node = stop
-                    dist = osmnx.distance.great_circle(
-                        stop[0], stop[1], i["LAT"], i["LONG"]
-                    )
+                    dist = res["paths"][0]["distance"]
 
             if dist < 10:
                 if last_query_node[i["id"]] == nearest_node:
@@ -62,8 +66,8 @@ def test(app: FastAPI):
             app.state.reverse_direc = reverse_direc
             app.state.last_stop = last_stop
 
-        print(curr_delay)
-        print(last_query_node)
+        # print(curr_delay)
+        # print(last_query_node)
         print(last_stop)
-        print(reverse_direc)
+        # print(reverse_direc)
         sleep(5)
