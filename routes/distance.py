@@ -1,6 +1,3 @@
-# WORK IN PROGRESS
-
-from platform import node
 from fastapi import APIRouter, Request
 import requests
 from db.supabase import supabase
@@ -8,35 +5,123 @@ from db.supabase import supabase
 router = APIRouter()
 
 
+def gphd(lat1, long1, lat2, long2):
+    params = {
+        "profile": "car",
+    }
+    req_string = (
+        f"http://127.0.0.1:8989/route?point={lat1},{long1}&point={lat2},{long2}"
+    )
+    res = requests.get(
+        url=req_string,
+        params=params,
+    )
+    return res.json()["paths"][0]["distance"]
+
+
 @router.get("/distance")
 async def distance(request: Request, route_id: str):
     stop_locations: dict[str, list[tuple]] = request.app.state.stop_locations
+    stop_locations_id: dict[str, list[str]] = request.app.state.stop_locations_id
     reverse_direc: dict[str, bool] = request.app.state.reverse_direc
     last_stop = request.app.state.last_stop
 
     shuttles = (
         supabase.table("GPS").select("*").eq("assigned_route", route_id).execute().data
     )
+
     n = len(stop_locations[route_id])
-    distances = [0 for i in range(n)]
+    distances: dict[str, list[dict[str, float]]] = {}
     for i in shuttles:
+        distances[i["id"]] = []
         try:
             last_stop_index = stop_locations[route_id].index(last_stop[i["id"]])
-
-            params = {
-                "profile": "car",
-            }
-
-            req_string = f"http://127.0.0.1:8989/route?point={i['LAT']},{i['LONG']}&point={stop_locations[route_id][last_stop_index+1][0]},{stop_locations[route_id][last_stop_index+1][1]}"
-            res = requests.get(
-                url=req_string,
-                params=params,
-            )
-            # if reverse_direc[i]:
-
-            # else:
-
         except ValueError:
             print("No stop found")
+            continue
+
+        if reverse_direc[i["id"]]:
+            try:
+                distances[i["id"]].append(
+                    {
+                        stop_locations_id[route_id][last_stop_index - 1]: gphd(
+                            i["LAT"],
+                            i["LONG"],
+                            stop_locations[route_id][last_stop_index - 1][0],
+                            stop_locations[route_id][last_stop_index - 1][1],
+                        )
+                    }
+                )
+            except:
+                print("BUG TRIGGERED!!!")
+                distances[i["id"]].append(
+                    {stop_locations_id[route_id][last_stop_index]: 0}
+                )
+
+            for j in range(last_stop_index - 2, -1, -1):
+                distances[i["id"]].append(
+                    {
+                        stop_locations_id[route_id][j]: gphd(
+                            i["LAT"],
+                            i["LONG"],
+                            stop_locations[route_id][j][0],
+                            stop_locations[route_id][j][1],
+                        )
+                    }
+                )
+            for j in range(1, n):
+                distances[i["id"]].append(
+                    {
+                        stop_locations_id[route_id][j]: gphd(
+                            stop_locations[route_id][j - 1][0],
+                            stop_locations[route_id][j - 1][1],
+                            stop_locations[route_id][j][0],
+                            stop_locations[route_id][j][1],
+                        )
+                        + [*distances[i["id"]][-1].values()][0]
+                    }
+                )
+        else:
+            try:
+                distances[i["id"]].append(
+                    {
+                        stop_locations_id[route_id][last_stop_index + 1]: gphd(
+                            i["LAT"],
+                            i["LONG"],
+                            stop_locations[route_id][last_stop_index + 1][0],
+                            stop_locations[route_id][last_stop_index + 1][1],
+                        )
+                    }
+                )
+            except:
+                print("BUG TRIGGERED!!!")
+                distances[i["id"]].append(
+                    {stop_locations_id[route_id][last_stop_index]: 0}
+                )
+
+            for j in range(last_stop_index + 2, n):
+                distances[i["id"]].append(
+                    {
+                        stop_locations_id[route_id][j]: gphd(
+                            stop_locations[route_id][j - 1][0],
+                            stop_locations[route_id][j - 1][1],
+                            stop_locations[route_id][j][0],
+                            stop_locations[route_id][j][1],
+                        )
+                        + [*distances[i["id"]][-1].values()][0]
+                    }
+                )
+            for j in range(n - 2, -1, -1):
+                distances[i["id"]].append(
+                    {
+                        stop_locations_id[route_id][j]: gphd(
+                            stop_locations[route_id][j + 1][0],
+                            stop_locations[route_id][j + 1][1],
+                            stop_locations[route_id][j][0],
+                            stop_locations[route_id][j][1],
+                        )
+                        + [*distances[i["id"]][-1].values()][0]
+                    }
+                )
 
     return distances

@@ -3,8 +3,6 @@ from contextlib import asynccontextmanager
 
 from threading import Thread
 
-import requests
-
 from threads import location_thread
 
 from db.supabase import supabase
@@ -20,6 +18,7 @@ async def lifespan(app: FastAPI):
 
     stop_distance: dict[str, list] = {}
     stop_locations: dict[str, list[tuple[float, float]]] = {}
+    stop_locations_id: dict[str, list[str]] = {}
 
     route_ids = supabase.table("Route").select("*").execute().data
     for i in route_ids:
@@ -31,17 +30,18 @@ async def lifespan(app: FastAPI):
             .execute()
             .data
         )
-        print(shuttle_route)
-        route_float = []
 
-        route_float.append(
-            (shuttle_route[0]["Stops"]["lat"], shuttle_route[0]["Stops"]["long"])
-        )
+        route_float = []
+        stop_id = []
+        for j in shuttle_route:
+            route_float.append((j["Stops"]["lat"], j["Stops"]["long"]))
+            stop_id.append(j["Stops"]["id"])
 
         stop_locations.update({i["id"]: route_float})
+        stop_locations_id.update({i["id"]: stop_id})
 
     app.state.stop_locations = stop_locations
-
+    app.state.stop_locations_id = stop_locations_id
     Thread(target=location_thread.test, args=[app], daemon=True).start()
     yield
     print("Goodbye!")

@@ -1,9 +1,7 @@
 from time import sleep
 from fastapi import FastAPI
-import osmnx.distance
 import requests
 from db.supabase import supabase
-import osmnx
 
 
 def test(app: FastAPI):
@@ -53,7 +51,7 @@ def test(app: FastAPI):
                 if last_stop[i["id"]] != (-1, -1):
                     x = route.index(last_stop[i["id"]])
                     y = route.index(nearest_node)
-                    if x == 0:
+                    if y == 0:
                         reverse_direc[i["id"]] = False
                     elif y == len(route) - 1:
                         reverse_direc[i["id"]] = True
@@ -65,9 +63,5 @@ def test(app: FastAPI):
 
             app.state.reverse_direc = reverse_direc
             app.state.last_stop = last_stop
-
-        # print(curr_delay)
-        # print(last_query_node)
         print(last_stop)
-        # print(reverse_direc)
         sleep(5)
