@@ -1,0 +1,8 @@
+.vscode
+__pycache__
+cache
+app_env
+route.py
+redis-test.py
+.venv
+markdown

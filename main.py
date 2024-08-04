@@ -52,7 +52,7 @@ app = FastAPI(lifespan=lifespan)
 
 @app.get("/")
 async def root():
-    return {"message": f"{app.state.G.nodes}"}
+    return {"message": "Hello world"}
 
 
 app.include_router(shuttles_router)
