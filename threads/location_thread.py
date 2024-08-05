@@ -1,4 +1,5 @@
 from time import sleep
+from exceptiongroup import catch
 from fastapi import FastAPI
 import requests
 from db.supabase import supabase
@@ -30,15 +31,18 @@ def test(app: FastAPI):
                 params = {
                     "profile": "car",
                 }
-                req_string = f"http://127.0.0.1:8989/route?point={i['LAT']},{i['LONG']}&point={stop[0]},{stop[1]}"
+                req_string = f"http://graphhopper-container:8989/route?point={i['LAT']},{i['LONG']}&point={stop[0]},{stop[1]}"
                 res = requests.get(
                     url=req_string,
                     params=params,
                 )
                 res = res.json()
-                if res["paths"][0]["distance"] < dist:
-                    nearest_node = stop
-                    dist = res["paths"][0]["distance"]
+                try:
+                    if res["paths"][0]["distance"] < dist:
+                        nearest_node = stop
+                        dist = res["paths"][0]["distance"]
+                except:
+                    continue
 
             if dist < 10:
                 if last_query_node[i["id"]] == nearest_node:
@@ -63,5 +67,5 @@ def test(app: FastAPI):
 
             app.state.reverse_direc = reverse_direc
             app.state.last_stop = last_stop
-        print(last_stop)
+        print(last_stop, reverse_direc)
         sleep(5)

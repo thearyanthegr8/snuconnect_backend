@@ -9,9 +9,7 @@ def gphd(lat1, long1, lat2, long2):
     params = {
         "profile": "car",
     }
-    req_string = (
-        f"http://127.0.0.1:8989/route?point={lat1},{long1}&point={lat2},{long2}"
-    )
+    req_string = f"http://graphhopper-container:8989/route?point={lat1},{long1}&point={lat2},{long2}"
     res = requests.get(
         url=req_string,
         params=params,
@@ -62,11 +60,12 @@ async def distance(request: Request, route_id: str):
                 distances[i["id"]].append(
                     {
                         stop_locations_id[route_id][j]: gphd(
-                            i["LAT"],
-                            i["LONG"],
+                            stop_locations[route_id][j + 1][0],
+                            stop_locations[route_id][j + 1][1],
                             stop_locations[route_id][j][0],
                             stop_locations[route_id][j][1],
                         )
+                        + [*distances[i["id"]][-1].values()][0]
                     }
                 )
             for j in range(1, n):
