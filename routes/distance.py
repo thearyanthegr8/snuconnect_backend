@@ -1,6 +1,8 @@
+import json
 from fastapi import APIRouter, Request
 import requests
 from db.supabase import supabase
+import redis
 
 router = APIRouter()
 
@@ -19,6 +21,12 @@ def gphd(lat1, long1, lat2, long2):
 
 @router.get("/distance")
 async def distance(request: Request, route_id: str):
+    r = redis.Redis(host='redis', port=6379, decode_responses=True, charset='utf-8')
+    redis_resp = r.get(route_id)
+    
+    if redis_resp:
+        return json.loads(str(redis_resp))
+    
     stop_locations: dict[str, list[tuple]] = request.app.state.stop_locations
     stop_locations_id: dict[str, list[str]] = request.app.state.stop_locations_id
     reverse_direc: dict[str, bool] = request.app.state.reverse_direc
@@ -122,5 +130,5 @@ async def distance(request: Request, route_id: str):
                         + [*distances[i["id"]][-1].values()][0]
                     }
                 )
-
+    r.set(route_id, json.dumps(distances), ex=5)
     return distances

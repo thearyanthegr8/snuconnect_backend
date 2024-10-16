@@ -44,14 +44,14 @@ def test(app: FastAPI):
                 except:
                     continue
 
-            if dist < 10:
+            if dist < 20:
                 if last_query_node[i["id"]] == nearest_node:
                     curr_delay[i["id"]] += 5
                 else:
                     last_query_node[i["id"]] = nearest_node
                     curr_delay[i["id"]] = 0
 
-            if curr_delay[i["id"]] >= 15:
+            if curr_delay[i["id"]] >= 7:
                 if last_stop[i["id"]] != (-1, -1):
                     x = route.index(last_stop[i["id"]])
                     y = route.index(nearest_node)
