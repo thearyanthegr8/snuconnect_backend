@@ -8,6 +8,13 @@ services:
     container_name: graphhopper-container
     networks:
       - test-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8989/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
   redis:
     image: redis
     container_name: redis
@@ -15,13 +22,20 @@ services:
       - "6379:6379"
     networks:
       - test-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
   backend: 
     depends_on:
-      - graphhopper
-      - redis
+      graphhopper:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     image: mudit51/sconnect-back:redis-exp
     ports:
       - "45000:80"
     networks:
       - test-network
-  
