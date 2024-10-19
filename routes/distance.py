@@ -21,10 +21,10 @@ def gphd(lat1, long1, lat2, long2):
 
 @router.get("/distance")
 async def distance(request: Request, route_id: str):
-    r = redis.Redis(host='redis', port=6379, decode_responses=True, charset='utf-8')
-    redis_resp = r.get(route_id)
+    redis_resp = request.app.state.r.get(route_id)
     
     if redis_resp:
+        print("Cache hit!")
         return json.loads(str(redis_resp))
     
     stop_locations: dict[str, list[tuple]] = request.app.state.stop_locations
@@ -130,5 +130,5 @@ async def distance(request: Request, route_id: str):
                         + [*distances[i["id"]][-1].values()][0]
                     }
                 )
-    r.set(route_id, json.dumps(distances), ex=5)
+    request.app.state.r.set(route_id, json.dumps(distances), ex=5)
     return distances

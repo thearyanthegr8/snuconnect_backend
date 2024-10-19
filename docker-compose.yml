@@ -1,0 +1,27 @@
+networks:
+  test-network: 
+    external: true
+
+services:
+  graphhopper:
+    image: mudit51/graphhopper
+    container_name: graphhopper-container
+    networks:
+      - test-network
+  redis:
+    image: redis
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - test-network
+  backend: 
+    depends_on:
+      - graphhopper
+      - redis
+    image: mudit51/sconnect-back:redis-exp
+    ports:
+      - "45000:80"
+    networks:
+      - test-network
+  

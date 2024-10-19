@@ -1,7 +1,10 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from threading import Thread
+
+import redis
 
 from threads import location_thread
 
@@ -40,6 +43,7 @@ async def lifespan(app: FastAPI):
         stop_locations.update({i["id"]: route_float})
         stop_locations_id.update({i["id"]: stop_id})
 
+    app.state.r = redis.Redis(host='redis', port=6379, decode_responses=True, charset='utf-8')
     app.state.stop_locations = stop_locations
     app.state.stop_locations_id = stop_locations_id
     Thread(target=location_thread.test, args=[app], daemon=True).start()
@@ -48,6 +52,14 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+origins = ["*"]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/")
