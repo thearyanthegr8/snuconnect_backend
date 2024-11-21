@@ -51,7 +51,7 @@ def test(app: FastAPI):
                     last_query_node[i["id"]] = nearest_node
                     curr_delay[i["id"]] = 0
 
-            if curr_delay[i["id"]] >= 7:
+            if curr_delay[i["id"]] >= 5:
                 if last_stop[i["id"]] != (-1, -1):
                     x = route.index(last_stop[i["id"]])
                     y = route.index(nearest_node)
