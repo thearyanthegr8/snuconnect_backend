@@ -1,5 +1,6 @@
 # FastAPI route to get data of all shuttles on campus
 
+import json
 from fastapi import APIRouter, Request
 from db.supabase import supabase
 from datetime import datetime, timedelta
@@ -30,3 +31,14 @@ async def get_shuttles():
 @router.get("/routes")
 async def get_routes(request: Request):
     return  supabase.table("Route").select("*").execute().data
+
+@router.get("/get-locations")
+async def get_locations(request: Request):
+    redis_resp = request.app.state.r.get("locations")
+    if redis_resp:
+        print("Cache hit!")
+        return json.loads(str(redis_resp))
+    
+    data = supabase.table("GPS").select("*").execute().data
+    request.app.state.r.set("locations", json.dumps(data), ex=1)
+    return data

@@ -34,7 +34,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    image: mudit51/sconnect-back:redis-exp
+    image: mudit51/sconnect-back:full
     ports:
       - "45000:80"
     networks:
